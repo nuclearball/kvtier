@@ -1,0 +1,188 @@
+{
+  "abi_version": 2,
+  "struct": "kv_config",
+  "fields": [
+    {
+      "name": "n_groups_tokens",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "KV_TOKENS_PER_GROUP",
+      "doc": "tokens per KV group"
+    },
+    {
+      "name": "region_cnt",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "6",
+      "doc": "number of regions"
+    },
+    {
+      "name": "region_size_pages",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "0",
+      "doc": "0 => auto from device capacity"
+    },
+    {
+      "name": "epoch_secs",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "1800",
+      "doc": "generation epoch seconds"
+    },
+    {
+      "name": "gc_high_water_pct",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "10",
+      "doc": "legacy gc high-water pct"
+    },
+    {
+      "name": "hot_hit_threshold",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "64",
+      "doc": "hotness upgrade threshold"
+    },
+    {
+      "name": "hot_decay_ms",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "10000",
+      "doc": "hotness decay window ms"
+    },
+    {
+      "name": "sync_mode",
+      "c_type": "bool",
+      "py_type": "c_bool",
+      "default": "false",
+      "doc": "put acks wait for fua/fsync"
+    },
+    {
+      "name": "journal_pages",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "512",
+      "doc": "per-device journal size pages"
+    },
+    {
+      "name": "stripe_threshold",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "KV_STRIPE_THRESHOLD",
+      "doc": "0 => default; bytes triggering stripe split"
+    },
+    {
+      "name": "metrics_level",
+      "c_type": "uint8_t",
+      "py_type": "c_uint8",
+      "default": "1",
+      "doc": "0 off / 1 counters / 2 +histograms"
+    },
+    {
+      "name": "gc_start_pct",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "80",
+      "doc": "generational GC trigger pct"
+    },
+    {
+      "name": "gc_stop_pct",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "70",
+      "doc": "GC hysteresis stop pct"
+    },
+    {
+      "name": "gc_step_gens",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "1",
+      "doc": "max generations dropped per tick"
+    },
+    {
+      "name": "min_gen_age_secs",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "0",
+      "doc": "minimum evictable generation age"
+    },
+    {
+      "name": "evict_tomb_cap",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "65536",
+      "doc": "evicted-key tombstone slots (pow2)"
+    },
+    {
+      "name": "max_layers",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "KV_MAX_LAYERS_CAP",
+      "doc": "runtime per-group layer limit"
+    },
+    {
+      "name": "batch_min_bytes",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "KV_BATCH_MIN_BYTES",
+      "doc": "0 => default; group-commit batch floor"
+    },
+    {
+      "name": "dram_cache_bytes",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "KV_DRAM_DEFAULT_BYTES",
+      "doc": "DRAM read cache budget"
+    },
+    {
+      "name": "dram_entry_max_bytes",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "KV_DRAM_DEFAULT_ENTRY_MAX",
+      "doc": "0 => default; skip larger entries"
+    },
+    {
+      "name": "dram_alloc_backend",
+      "c_type": "uint8_t",
+      "py_type": "c_uint8",
+      "default": "0",
+      "doc": "0 auto / 1 plain / 2 thp / 3 hugetlb"
+    },
+    {
+      "name": "dram_cache_side",
+      "c_type": "uint8_t",
+      "py_type": "c_uint8",
+      "default": "0",
+      "doc": "reserved: 0 consumer / 1 storage"
+    },
+    {
+      "name": "stripe_unit",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "0",
+      "doc": "0 => KV_STRIPE_UNIT; stripe slice bytes"
+    },
+    {
+      "name": "region_align_bytes",
+      "c_type": "uint64_t",
+      "py_type": "c_uint64",
+      "default": "0",
+      "doc": "0 => page; region capacity alignment"
+    },
+    {
+      "name": "abi_version",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "KV_CONFIG_ABI_VERSION",
+      "doc": "ABI version (appended last)"
+    },
+    {
+      "name": "abi_size",
+      "c_type": "uint32_t",
+      "py_type": "c_uint32",
+      "default": "sizeof(struct kv_config)",
+      "doc": "sizeof(kv_config) at build time"
+    }
+  ]
+}

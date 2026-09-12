@@ -1,0 +1,26 @@
+# build output
+/build/
+build*/
+*.o
+*.a
+*.dylib
+*.so
+*.dSYM/
+
+# test / runtime artifacts
+*.img
+*.img.ckpt
+*.tmp
+
+# tooling caches
+__pycache__/
+.pytest_cache/
+.venv/
+
+# local design notes (kept locally, not published)
+/design/
+
+# secrets / local config
+password*
+.env
+*.pem
