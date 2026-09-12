@@ -1,11 +1,11 @@
-/* DRAM read cache tests (dram-cache-design.md):
+/* DRAM read cache tests:
  *   - arena backend probe + degrade chain (HUGETLB -> THP -> plain)
  *   - size-class alloc/free, arena exhaustion -> external fallback
  *   - SIEVE eviction (budget bound, hand wrap, stale ver replace)
  *   - cache-level coherence: put overwrite invalidates, evict, TTL
  */
 #include "dram.hpp"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

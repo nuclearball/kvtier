@@ -7,7 +7,7 @@ import threading
 import pytest
 
 from conftest import make_cache
-from solidcacher_py._binding import (
+from kvtier_py._binding import (
     KV_ECRC,
     KV_ENOENT,
     KV_EVICTED,

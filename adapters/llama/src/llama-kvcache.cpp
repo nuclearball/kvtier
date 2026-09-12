@@ -18,7 +18,7 @@
     return v + 1;
 }
 
-/* generate a solidcacher prefix_id from seq_id + token hash */
+/* generate a kvtier prefix_id from seq_id + token hash */
 static uint64_t make_prefix_id(llama_seq_id seq_id,
                                const uint32_t *tokens, size_t n_tok) {
     /* FNV-1a over the token stream, mixed with seq_id */
@@ -37,7 +37,7 @@ static uint64_t make_prefix_id(llama_seq_id seq_id,
     return h;
 }
 
-/* generate deterministic tokens from seq_id (for solidcacher key) */
+/* generate deterministic tokens from seq_id (for kvtier key) */
 static void make_tokens(llama_seq_id seq_id, uint32_t *tokens, uint32_t n) {
     for (uint32_t i = 0; i < n; i++) {
         /* linear congruential generator seeded by seq_id */
@@ -46,7 +46,7 @@ static void make_tokens(llama_seq_id seq_id, uint32_t *tokens, uint32_t n) {
     }
 }
 
-/* solidcacher ack callback wrapper */
+/* kvtier ack callback wrapper */
 struct save_ack_ctx {
     llama_kvcache_ack_fn user_ack;
     void *user_data;
@@ -109,7 +109,7 @@ int llama_kvcache_ctx_init(struct llama_kvcache_ctx *ctx,
         }
     }
 
-    /* configure solidcacher */
+    /* configure kvtier */
     struct kv_config sccfg;
     kv_config_default(&sccfg);
     if (cfg) {
@@ -124,7 +124,7 @@ int llama_kvcache_ctx_init(struct llama_kvcache_ctx *ctx,
     sccfg.max_layers = 1;  /* we store the entire state as one opaque layer */
     std::memcpy(&ctx->cache_cfg, &sccfg, sizeof(sccfg));
 
-    /* open solidcacher */
+    /* open kvtier */
     int rc = cache_open(&ctx->cache, dev_uris, n_devs, &sccfg);
     if (rc != KV_EOK) {
         for (int i = 0; i < n_devs; i++) std::free(ctx->dev_uris[i]);
@@ -178,7 +178,7 @@ int llama_kvcache_save(struct llama_kvcache_ctx *ctx,
         std::memcpy(tok_copy, tokens, n_tok * sizeof(llama_token));
     }
 
-    /* 3. build solidcacher key — MUST match restore/has, which derive the
+    /* 3. build kvtier key — MUST match restore/has, which derive the
      *    prefix_id from make_tokens(seq_id), not from the user token list */
     uint32_t sc_tokens[KV_TOKENS_PER_GROUP];
     make_tokens(seq_id, sc_tokens, KV_TOKENS_PER_GROUP);
@@ -253,7 +253,7 @@ size_t llama_kvcache_restore(struct llama_kvcache_ctx *ctx,
 
     uint64_t prefix_id = make_prefix_id(seq_id, sc_tokens, KV_TOKENS_PER_GROUP);
 
-    /* read from solidcacher */
+    /* read from kvtier */
     struct cache_get_result res;
     int rc = cache_get(ctx->cache, prefix_id, sc_tokens,
                        KV_TOKENS_PER_GROUP, &res);

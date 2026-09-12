@@ -1,6 +1,6 @@
 /* scenario tests: sync_mode, journal overflow (EFULL), n_devs > 4 */
 #include "common.hpp"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

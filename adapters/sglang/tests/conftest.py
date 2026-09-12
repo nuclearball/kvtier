@@ -10,7 +10,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from solidcacher_py.cache import Solidcacher  # noqa: E402
+from kvtier_py.cache import Kvtier  # noqa: E402
 
 # small geometry keeps device files tiny:
 #   pages = KV_REGION_BASE_PAGE(2) + region_cnt*region_size_pages + journal(512)
@@ -25,7 +25,7 @@ def make_cache(tmp_path, n_devs=1, **overrides):
     uris = [str(tmp_path / f"dev{i}.img") for i in range(n_devs)]
     cfg = dict(SMALL_CFG)
     cfg.update(overrides)
-    return Solidcacher(uris, **cfg)
+    return Kvtier(uris, **cfg)
 
 
 @pytest.fixture()

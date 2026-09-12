@@ -10,10 +10,10 @@ set(CMAKE_C_STANDARD 11)
 option(LLAMAKVCACHE_BUILD_EXAMPLES "Build examples" ON)
 option(LLAMAKVCACHE_SHARED         "Build as shared library" OFF)
 
-# Root of the rewritten (C++) solidcacher core.  Defaults to the sibling
-# solidcacher-cpp tree (this file lives in solidcacher-cpp/adapters/llama).
-set(SOLIDCACHER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.."
-    CACHE PATH "Root of the solidcacher-cpp tree")
+# Root of the kvtier core.  Defaults to the sibling repository root
+# (this file lives in <repo>/adapters/llama).
+set(KVTier_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.."
+    CACHE PATH "Root of the kvtier tree")
 
 find_package(Threads REQUIRED)
 
@@ -40,41 +40,41 @@ find_path(GGML_INCLUDE_DIR ggml.h
 )
 
 # ---------------------------------------------------------------------------
-# solidcacher core: prefer the sibling solidcacher-cpp tree
+# kvtier core: prefer the sibling kvtier tree
 # ---------------------------------------------------------------------------
-find_path(SOLIDCACHER_INCLUDE_DIR solidcacher.h
-    HINTS ${SOLIDCACHER_ROOT}/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/../solidcacher/include
-          ${CMAKE_CURRENT_SOURCE_DIR}/../../solidcacher/include
+find_path(KVTier_INCLUDE_DIR kvtier.h
+    HINTS ${KVTier_ROOT}/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/../kvtier/include
+          ${CMAKE_CURRENT_SOURCE_DIR}/../../kvtier/include
           /usr/local/include
           /opt/homebrew/include
 )
 
-if(NOT SOLIDCACHER_INCLUDE_DIR)
+if(NOT KVTier_INCLUDE_DIR)
     message(FATAL_ERROR
-        "solidcacher.h not found. Build the core, or set "
-        "-DSOLIDCACHER_ROOT=/path/to/solidcacher-cpp (or -DSOLIDCACHER_INCLUDE_DIR=)")
+        "kvtier.h not found. Build the core, or set "
+        "-DKVTier_ROOT=/path/to/kvtier (or -DKVTier_INCLUDE_DIR=)")
 endif()
 
 # If the core is pulled in via add_subdirectory, use its CMake target.
-# Otherwise locate the prebuilt library (build/libsolidcacher.* -> kvcache).
-if(TARGET solidcacher)
-    set(SOLIDCACHER_LINK solidcacher)
+# Otherwise locate the prebuilt library (build/libkvtier.* -> kvcache).
+if(TARGET kvtier)
+    set(KVTier_LINK kvtier)
 else()
-    find_library(SOLIDCACHER_LIBRARY
-        NAMES solidcacher kvcache
-        HINTS ${SOLIDCACHER_ROOT}/build
-              ${CMAKE_CURRENT_SOURCE_DIR}/../solidcacher/build
-              ${CMAKE_CURRENT_SOURCE_DIR}/../solidcacher
+    find_library(KVTier_LIBRARY
+        NAMES kvtier kvcache
+        HINTS ${KVTier_ROOT}/build
+              ${CMAKE_CURRENT_SOURCE_DIR}/../kvtier/build
+              ${CMAKE_CURRENT_SOURCE_DIR}/../kvtier
               /usr/local/lib
               /opt/homebrew/lib
     )
-    if(NOT SOLIDCACHER_LIBRARY)
+    if(NOT KVTier_LIBRARY)
         message(FATAL_ERROR
-            "libsolidcacher not found under ${SOLIDCACHER_ROOT}/build. "
-            "Build the core first or set -DSOLIDCACHER_ROOT= / -DSOLIDCACHER_LIBRARY=")
+            "libkvtier not found under ${KVTier_ROOT}/build. "
+            "Build the core first or set -DKVTier_ROOT= / -DKVTier_LIBRARY=")
     endif()
-    set(SOLIDCACHER_LINK ${SOLIDCACHER_LIBRARY})
+    set(KVTier_LINK ${KVTier_LIBRARY})
 endif()
 
 # ---------------------------------------------------------------------------
@@ -94,13 +94,13 @@ target_include_directories(llama-kvcache
     PRIVATE
         ${LLAMA_INCLUDE_DIR}
         ${GGML_INCLUDE_DIR}
-        ${SOLIDCACHER_INCLUDE_DIR}
+        ${KVTier_INCLUDE_DIR}
 )
 
 target_link_libraries(llama-kvcache
     PRIVATE
         ${LLAMA_LIBRARY}
-        ${SOLIDCACHER_LINK}
+        ${KVTier_LINK}
 )
 
 # ---------------------------------------------------------------------------
@@ -112,7 +112,7 @@ if(LLAMAKVCACHE_BUILD_EXAMPLES)
         PRIVATE
             ${LLAMA_INCLUDE_DIR}
             ${GGML_INCLUDE_DIR}
-            ${SOLIDCACHER_INCLUDE_DIR}
+            ${KVTier_INCLUDE_DIR}
     )
     target_link_libraries(example_save_restore
         PRIVATE
@@ -125,7 +125,7 @@ if(LLAMAKVCACHE_BUILD_EXAMPLES)
         PRIVATE
             ${LLAMA_INCLUDE_DIR}
             ${GGML_INCLUDE_DIR}
-            ${SOLIDCACHER_INCLUDE_DIR}
+            ${KVTier_INCLUDE_DIR}
     )
     target_link_libraries(example_noise_mixed
         PRIVATE

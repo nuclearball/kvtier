@@ -8,7 +8,7 @@ namespace sc {
 void fatal(const char *fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    std::fputs("solidcacher: ", stderr);
+    std::fputs("kvtier: ", stderr);
     std::vfprintf(stderr, fmt, ap);
     std::fputc('\n', stderr);
     va_end(ap);

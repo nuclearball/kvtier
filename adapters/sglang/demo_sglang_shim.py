@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""End-to-end demo of the sglang HiCache storage shim over solidcacher.
+"""End-to-end demo of the sglang HiCache storage shim over kvtier.
 
 Simulates an sglang HiCache workload without requiring sglang/torch:
 
   Phase 1 (BlobCodec — production shape)
     Paged KV pages of a "model" (n_layers per-page records) stored via the
-    SolidcacherStorage v1 interface, longest-prefix batch_exists, restore.
+    KvtierStorage v1 interface, longest-prefix batch_exists, restore.
 
   Phase 2 (TokenCodec — validation shape)
     Two sequences sharing a 4-page prefix: dedup on the shared pages,
@@ -26,10 +26,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from sglang_backend.backend import SolidcacherStorage  # noqa: E402
+from sglang_backend.backend import KvtierStorage  # noqa: E402
 from sglang_backend.keycodec import TokenCodec  # noqa: E402
-from solidcacher_py._binding import KV_TOKENS_PER_GROUP, KV_EVICTED  # noqa: E402
-from solidcacher_py.cache import Solidcacher  # noqa: E402
+from kvtier_py._binding import KV_TOKENS_PER_GROUP, KV_EVICTED  # noqa: E402
+from kvtier_py.cache import Kvtier  # noqa: E402
 
 PAGE = KV_TOKENS_PER_GROUP
 
@@ -49,13 +49,13 @@ def hr(title: str) -> None:
     print(f"\n{'=' * 64}\n{title}\n{'=' * 64}")
 
 
-def phase1_blob(workdir: Path) -> Solidcacher:
-    hr("Phase 1 — BlobCodec: sglang page keys via SolidcacherStorage (v1)")
+def phase1_blob(workdir: Path) -> Kvtier:
+    hr("Phase 1 — BlobCodec: sglang page keys via KvtierStorage (v1)")
     # NOTE on capacity: 8 pages × 1 MiB must fit comfortably.  When the write
     # cursor runs out of region space, the writer force-frees the oldest
     # region (rotation) — pages can be recycled BEFORE gc_start_pct is ever
     # hit.  Size regions with headroom.
-    b = SolidcacherStorage(
+    b = KvtierStorage(
         [str(workdir / "dev0.img")],
         region_cnt=2,
         region_size_pages=8192,  # 32 MiB × 2 devices = 64 MiB capacity
@@ -89,14 +89,14 @@ def phase1_blob(workdir: Path) -> Solidcacher:
     return b
 
 
-def _blob_addr(b: SolidcacherStorage, key: str):
+def _blob_addr(b: KvtierStorage, key: str):
     ck = b.codec.encode(b._skey(key))
     return ck.prefix_id, ck.tokens
 
 
-def phase2_tokens(workdir: Path) -> Solidcacher:
+def phase2_tokens(workdir: Path) -> Kvtier:
     hr("Phase 2 — TokenCodec: content-addressed prefix sharing & dedup")
-    c = Solidcacher(
+    c = Kvtier(
         [str(workdir / "tok0.img")],
         region_cnt=2,
         region_size_pages=1024,
@@ -141,14 +141,14 @@ def phase2_tokens(workdir: Path) -> Solidcacher:
     return c
 
 
-def phase3_reopen(caches: list[Solidcacher]) -> list[Solidcacher]:
+def phase3_reopen(caches: list[Kvtier]) -> list[Kvtier]:
     hr("Phase 3 — durability: close + reopen (journal replay)")
     reopened = []
     for i, c in enumerate(caches):
         uris = list(c.dev_uris)
         cfg = dict(c.config)
         c.close()
-        c2 = Solidcacher(uris, **cfg)
+        c2 = Kvtier(uris, **cfg)
         st = c2.stats()
         print(f"  cache[{i}] reopened: leaves={st['leaves']} hits={st['hits']}")
         assert st["leaves"] > 0
@@ -166,7 +166,7 @@ def main() -> int:
     c = phase2_tokens(workdir)
     b.cache, c = phase3_reopen([b.cache, c])
 
-    hr("final solidcacher stats (phase-1 cache)")
+    hr("final kvtier stats (phase-1 cache)")
     for k, v in b.cache.stats().items():
         print(f"  {k:20s} {v}")
 

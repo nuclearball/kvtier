@@ -5,15 +5,15 @@ from __future__ import annotations
 import pytest
 
 from conftest import make_cache  # noqa: F401 — ensures sys.path
-from sglang_backend.backend import SolidcacherStorage, as_hicache_storage
+from sglang_backend.backend import KvtierStorage, as_hicache_storage
 from sglang_backend.keycodec import BlobCodec
-from solidcacher_py._binding import KV_ENOENT, KV_EVICTED
+from kvtier_py._binding import KV_ENOENT, KV_EVICTED
 
 
 @pytest.fixture()
 def backend(tmp_path):
     uris = [str(tmp_path / f"dev{i}.img") for i in range(2)]
-    b = SolidcacherStorage(
+    b = KvtierStorage(
         uris, region_cnt=2, region_size_pages=1024, metrics_level=2
     )
     yield b
@@ -98,8 +98,8 @@ def test_clear_wipes_and_reopens(backend):
 def test_get_stats_shape(backend):
     assert backend.set("statpage", b"x" * 128)
     st = backend.get_stats()
-    assert "solidcacher" in st
-    assert st["solidcacher"]["puts"] >= 1
+    assert "kvtier" in st
+    assert st["kvtier"]["puts"] >= 1
     assert st["sglang_version_pinned"] == "0.5.18"
 
 
@@ -111,8 +111,8 @@ def test_rank_suffix_namespacing(tmp_path):
         model_name = "test-model"
 
     uris = [str(tmp_path / "dev0.img")]
-    b = SolidcacherStorage(uris, storage_config=Cfg(), region_cnt=2, region_size_pages=1024)
-    b0 = SolidcacherStorage(uris, storage_config=None, region_cnt=2, region_size_pages=1024)
+    b = KvtierStorage(uris, storage_config=Cfg(), region_cnt=2, region_size_pages=1024)
+    b0 = KvtierStorage(uris, storage_config=None, region_cnt=2, region_size_pages=1024)
     try:
         assert b0.key_suffix == ""
         assert "test-model" in b.key_suffix and "0_2" in b.key_suffix
@@ -143,7 +143,7 @@ def test_dynamic_backend_constructor_convention(tmp_path):
 
     uris = [str(tmp_path / "dev0.img"), str(tmp_path / "dev1.img")]
     # 1) extra_kwargs wins over extra_config; interface_v1 must be ignored
-    b = SolidcacherStorage.from_config(
+    b = KvtierStorage.from_config(
         Cfg(), {"dev_uris": uris, "region_cnt": 2, "region_size_pages": 1024}
     )
     try:
@@ -155,7 +155,7 @@ def test_dynamic_backend_constructor_convention(tmp_path):
 
     # 2) settings via storage_config.extra_config only
     Cfg.extra_config = {"interface_v1": 1, "dev_uris": uris, "metrics_level": 2}
-    b2 = SolidcacherStorage.from_config(Cfg())
+    b2 = KvtierStorage.from_config(Cfg())
     try:
         assert b2.exists("dyn") is False  # fresh reopen of same files: index rebuilt
         assert b2.set("dyn2", b"e" * 64)
@@ -167,7 +167,7 @@ def test_dynamic_backend_constructor_convention(tmp_path):
         extra_config = {"interface_v1": 1}
 
     with pytest.raises(ValueError, match="dev_uris"):
-        SolidcacherStorage.from_config(NoCfg())
+        KvtierStorage.from_config(NoCfg())
 
 
 def test_as_hicache_storage_factory(tmp_path):

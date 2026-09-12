@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: build + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+  sanitizers:
+    name: asan + ubsan (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build-asan -DCMAKE_BUILD_TYPE=Debug -DSC_ENABLE_ASAN=ON
+      - name: Build
+        run: cmake --build build-asan --parallel
+      - name: Test
+        run: ctest --test-dir build-asan --output-on-failure
+
+  install-consumer:
+    name: install + find_package (ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Install
+        run: cmake --install build --prefix "$RUNNER_TEMP/prefix"
+      - name: Build a consumer via find_package
+        run: |
+          mkdir -p "$RUNNER_TEMP/consumer"
+          printf '%s\n' \
+            'cmake_minimum_required(VERSION 3.20)' \
+            'project(consumer C CXX)' \
+            'find_package(kvtier CONFIG REQUIRED)' \
+            'add_executable(consumer main.c)' \
+            'target_link_libraries(consumer PRIVATE kvtier::kvtier)' \
+            'add_executable(consumer_mp mp_main.c)' \
+            'target_link_libraries(consumer_mp PRIVATE kvtier::kvtier_mp)' \
+            > "$RUNNER_TEMP/consumer/CMakeLists.txt"
+          printf '%s\n' \
+            '#include "kvtier.h"' \
+            'int main(void) {' \
+            '    struct kv_config cfg;' \
+            '    kv_config_default(&cfg);' \
+            '    return cfg.region_cnt ? 0 : 1;' \
+            '}' \
+            > "$RUNNER_TEMP/consumer/main.c"
+          printf '%s\n' \
+            '#include "model_profile.h"' \
+            'int main(void) {' \
+            '    return kv_mp_by_name("deepseek-v3") ? 0 : 1;' \
+            '}' \
+            > "$RUNNER_TEMP/consumer/mp_main.c"
+          cmake -S "$RUNNER_TEMP/consumer" -B "$RUNNER_TEMP/consumer/build" \
+            -DCMAKE_PREFIX_PATH="$RUNNER_TEMP/prefix"
+          cmake --build "$RUNNER_TEMP/consumer/build"
+          "$RUNNER_TEMP/consumer/build/consumer"
+          "$RUNNER_TEMP/consumer/build/consumer_mp"

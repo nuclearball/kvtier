@@ -2,7 +2,7 @@
  * llama-kvcache.h — llama.cpp KV cache ↔ SSD KV cache adapter
  *
  * Uses llama.cpp's own serialization (llama_state_seq_get_data / set_data)
- * to dump/restore per-sequence KV cache into/from a solidcacher SSD cache.
+ * to dump/restore per-sequence KV cache into/from a kvtier SSD cache.
  *
  * This avoids depending on internal KV layout (varies by model, quantization,
  * n_stream, v_trans, etc.) and works with any architecture llama.cpp supports.
@@ -17,7 +17,7 @@
 #define LLAMA_KVCACHE_H
 
 #include <llama.h>
-#include <solidcacher.h>
+#include <kvtier.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -48,7 +48,7 @@ struct llama_kvcache_seq_info {
  * Configuration for the adapter.
  */
 struct llama_kvcache_cfg {
-    uint32_t  tokens_per_group;   /* solidcacher group size (0 = 32)       */
+    uint32_t  tokens_per_group;   /* kvtier group size (0 = 32)       */
     uint32_t  region_cnt;         /* SSD regions (0 = default 6)           */
     uint64_t  region_size_pages;  /* 0 = auto                              */
     uint32_t  epoch_secs;         /* 0 = default 1800                      */
@@ -65,8 +65,8 @@ void llama_kvcache_cfg_default(struct llama_kvcache_cfg *cfg);
  */
 struct llama_kvcache_ctx {
     struct llama_context *llama_ctx;  /* owned llama context                */
-    cache_t           *cache;         /* solidcacher instance                */
-    struct kv_config   cache_cfg;     /* solidcacher config snapshot         */
+    cache_t           *cache;         /* kvtier instance                */
+    struct kv_config   cache_cfg;     /* kvtier config snapshot         */
     int                n_devs;        /* number of SSD devices               */
     char             **dev_uris;      /* device URIs (copies)                */
     uint32_t           group_size;    /* tokens per group (32)               */
@@ -79,7 +79,7 @@ struct llama_kvcache_ctx {
 /**
  * Initialize the adapter.
  *
- * Opens a solidcacher instance backed by the given device URIs,
+ * Opens a kvtier instance backed by the given device URIs,
  * and caches model geometry from the llama_context.
  *
  * Returns 0 on success, negative error code on failure.
@@ -98,12 +98,12 @@ void llama_kvcache_ctx_destroy(struct llama_kvcache_ctx *ctx);
  * Save a sequence's KV cache to SSD (async).
  *
  * Serializes the KV state via llama_state_seq_get_data() and stores
- * the opaque blob into the solidcacher. Also saves the token list
+ * the opaque blob into the kvtier. Also saves the token list
  * so the sequence can be restored later.
  *
  * seq_id:       the llama sequence to save
  * tokens/n_tok: the token list active in this sequence (copied internally)
- * ack/user:     completion callback (fired from solidcacher writer thread)
+ * ack/user:     completion callback (fired from kvtier writer thread)
  *
  * Returns KV_EOK on enqueue, negative on error.
  */
@@ -115,7 +115,7 @@ int llama_kvcache_save(struct llama_kvcache_ctx *ctx,
 /**
  * Restore a sequence's KV cache from SSD (sync).
  *
- * Reads the saved state from solidcacher and feeds it into the
+ * Reads the saved state from kvtier and feeds it into the
  * destination sequence via llama_state_seq_set_data().
  *
  * seq_id:         source key (the seq_id that was saved)

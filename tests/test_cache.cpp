@@ -3,7 +3,7 @@
 #include "hash.hpp"
 #include "radix.hpp"
 #include "device.hpp"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

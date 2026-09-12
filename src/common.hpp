@@ -8,10 +8,10 @@
 #include <cstdio>
 #include <cstdlib>
 
-#include "solidcacher.h"
+#include "kvtier.h"
 
 #if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__)
-#error "solidcacher requires a little-endian host"
+#error "kvtier requires a little-endian host"
 #endif
 
 namespace sc {

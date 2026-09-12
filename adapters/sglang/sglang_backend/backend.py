@@ -1,4 +1,4 @@
-"""SolidcacherStorage — solidcacher-backed sglang HiCache storage shim.
+"""KvtierStorage — kvtier-backed sglang HiCache storage shim.
 
 Implements the sglang ``HiCacheStorage`` v1 contract (pinned to sglang
 0.5.18, python/sglang/srt/mem_cache/hicache_storage.py):
@@ -20,13 +20,13 @@ Design notes
 ------------
 * sglang keys are opaque per-page strings (content hashes) — they are mapped
   through :class:`~sglang_backend.keycodec.BlobCodec` into a single-group
-  solidcacher address.  Longest-prefix semantics live in sglang's caller
-  (batch_exists counts consecutive hits); solidcacher only supplies exact
+  kvtier address.  Longest-prefix semantics live in sglang's caller
+  (batch_exists counts consecutive hits); kvtier only supplies exact
   per-key hit/miss.
 * Eviction is intentionally NOT implemented: the HiCacheStorage contract has
   no delete — space reclamation is the storage's job, which is exactly what
-  solidcacher's generational GC does.
-* Writes wait for the solidcacher ack (durable + published), mirroring
+  kvtier's generational GC does.
+* Writes wait for the kvtier ack (durable + published), mirroring
   HiCacheFile's synchronous os.replace().
 """
 
@@ -36,11 +36,11 @@ import logging
 import os
 from pathlib import Path
 
-from solidcacher_py.cache import Solidcacher, SolidcacherError
+from kvtier_py.cache import Kvtier, KvtierError
 
 from .keycodec import BlobCodec
 
-log = logging.getLogger("sglang_backend.solidcacher")
+log = logging.getLogger("sglang_backend.kvtier")
 
 
 def _writable_byte_view(obj):
@@ -62,8 +62,8 @@ def _writable_byte_view(obj):
     return arr.reshape(-1)
 
 
-class SolidcacherStorage:
-    """Duck-typed sglang HiCacheStorage backend backed by solidcacher."""
+class KvtierStorage:
+    """Duck-typed sglang HiCacheStorage backend backed by kvtier."""
 
     sglang_version_pinned = "0.5.18"
 
@@ -75,7 +75,7 @@ class SolidcacherStorage:
         codec=None,
         **cache_config,
     ):
-        self.cache = Solidcacher(dev_uris, lib_path=lib_path, **cache_config)
+        self.cache = Kvtier(dev_uris, lib_path=lib_path, **cache_config)
         self.codec = codec if codec is not None else BlobCodec()
         self.dev_uris = list(self.cache.dev_uris)
         self.key_suffix = self._rank_suffix(storage_config)
@@ -115,11 +115,11 @@ class SolidcacherStorage:
             raise ValueError("set() needs value or target_location")
         try:
             rc = self.cache.put_sync(ck.prefix_id, ck.tokens, [payload])
-        except (SolidcacherError, TypeError, BufferError) as e:
-            log.error("solidcacher put failed for %s: %s", key, e)
+        except (KvtierError, TypeError, BufferError) as e:
+            log.error("kvtier put failed for %s: %s", key, e)
             return False
         if rc != 0:
-            log.error("solidcacher put rc=%d for %s", rc, key)
+            log.error("kvtier put rc=%d for %s", rc, key)
             return False
         return True
 
@@ -148,7 +148,7 @@ class SolidcacherStorage:
         return self.cache.exists(ck.prefix_id, ck.tokens)
 
     def lookup_rc(self, key: str) -> int:
-        """Raw solidcacher rc for a key (KV_ENOENT vs KV_EVICTED vs EOK)."""
+        """Raw kvtier rc for a key (KV_ENOENT vs KV_EVICTED vs EOK)."""
         ck = self.codec.encode(self._skey(key))
         return self.cache.lookup_rc(ck.prefix_id, ck.tokens)
 
@@ -191,19 +191,19 @@ class SolidcacherStorage:
 
         dev_uris = merged.pop("dev_uris", None)
         if dev_uris is None:
-            env = os.environ.get("SOLIDCACHER_DEV_URIS", "")
+            env = os.environ.get("KVTier_DEV_URIS", "")
             dev_uris = [u for u in env.split(",") if u]
         if not dev_uris:
             raise ValueError(
-                "solidcacher dev_uris not configured: set "
-                "SOLIDCACHER_DEV_URIS or pass dev_uris via "
+                "kvtier dev_uris not configured: set "
+                "KVTier_DEV_URIS or pass dev_uris via "
                 "hicache_storage_backend_extra_config"
             )
         lib_path = merged.pop("lib_path", None) or os.environ.get("KVCACHE_LIBRARY")
 
         # remaining keys: keep the ones that are kv_config fields, ignore the
         # rest (e.g. sglang's own interface_v1 flag) with a debug note
-        from solidcacher_py._binding import KVConfig
+        from kvtier_py._binding import KVConfig
 
         known = {f[0] for f in KVConfig._fields_}
         ignored = [k for k in merged if k not in known]
@@ -228,12 +228,12 @@ class SolidcacherStorage:
                 os.remove(uri)
             except FileNotFoundError:
                 pass
-        self.cache = Solidcacher(uris, **cfg)
+        self.cache = Kvtier(uris, **cfg)
 
     def get_stats(self):
         st = self.cache.stats()
         return {
-            "solidcacher": st,
+            "kvtier": st,
             "key_suffix": self.key_suffix,
             "sglang_version_pinned": self.sglang_version_pinned,
         }
@@ -243,20 +243,20 @@ class SolidcacherStorage:
 
 
 def as_hicache_storage(dev_uris=None, **kwargs):
-    """Return a SolidcacherStorage instance mixed with sglang's ABC when the
+    """Return a KvtierStorage instance mixed with sglang's ABC when the
     sglang package is importable; a plain duck-typed instance otherwise."""
     try:
         from sglang.srt.mem_cache.hicache_storage import HiCacheStorage
     except Exception as e:  # noqa: BLE001 — sglang optional
         log.info("sglang not importable (%s); returning duck-typed backend", e)
-        return SolidcacherStorage(dev_uris, **kwargs)
+        return KvtierStorage(dev_uris, **kwargs)
 
-    class SolidcacherHiCacheStorage(HiCacheStorage, SolidcacherStorage):
+    class KvtierHiCacheStorage(HiCacheStorage, KvtierStorage):
         """Real HiCacheStorage subclass (usable via storage-backend factory)."""
 
         def __init__(self, dev_uris, storage_config=None, **kw):
-            SolidcacherStorage.__init__(
+            KvtierStorage.__init__(
                 self, dev_uris, storage_config=storage_config, **kw
             )
 
-    return SolidcacherHiCacheStorage(dev_uris, **kwargs)
+    return KvtierHiCacheStorage(dev_uris, **kwargs)

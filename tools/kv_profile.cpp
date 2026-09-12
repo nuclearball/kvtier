@@ -1,5 +1,5 @@
 /* kv-profile: standalone, adapter-side helper that maps a model profile to
- * generic `kv_config` layout values.  NOT linked into libsolidcacher.
+ * generic `kv_config` layout values.  NOT linked into libkvtier.
  *
  * usage:
  *   kv-profile <model-name> [page_size]

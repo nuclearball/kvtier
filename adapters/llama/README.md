@@ -1,17 +1,17 @@
 # llama adapter
 
-llama.cpp KV cache ↔ SSD KV cache 适配层（C++ 版）。将 llama.cpp 的 per-sequence KV cache 序列化后存入 solidcacher SSD cache，支持 save / restore / evict 操作。
+llama.cpp KV cache ↔ SSD KV cache 适配层（C++ 版）。将 llama.cpp 的 per-sequence KV cache 序列化后存入 kvtier SSD cache，支持 save / restore / evict 操作。
 
 ## 原理
 
 ```
 llama_state_seq_get_data()  →  序列化的 KV state (opaque blob)
                                       ↓
-                          solidcacher cache_put()
+                          kvtier cache_put()
                                       ↓
                                SSD 持久化缓存
 
-solidcacher cache_get()     →  序列化的 KV state
+kvtier cache_get()     →  序列化的 KV state
                                       ↓
 llama_state_seq_set_data()  →  恢复到 llama context
 ```
@@ -23,24 +23,24 @@ llama_state_seq_set_data()  →  恢复到 llama context
 ```bash
 # 前置依赖:
 # 1. llama.cpp 已安装到 /usr/local
-# 2. solidcacher 核心已编译 (在 solidcacher-cpp/build/)
+# 2. kvtier 核心已编译（在仓库根目录 build/）
 
-cd solidcacher-cpp/adapters/llama
+cd <repo>/adapters/llama
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . -j
 ```
 
-适配器默认把同级的 `solidcacher-cpp` 目录作为核心库根目录
-（即 `${CMAKE_CURRENT_SOURCE_DIR}/../..`），使用其 `include/` 与
-`build/libsolidcacher.*`。如果核心库在别处，可显式指定：
+适配器默认把仓库根目录（即 `${CMAKE_CURRENT_SOURCE_DIR}/../..`）作为核心库
+根目录，使用其 `include/` 与 `build/libkvtier.*`。如果核心库在别处，
+可显式指定：
 
 ```bash
-cmake .. -DSOLIDCACHER_ROOT=/path/to/solidcacher-cpp
+cmake .. -DKVTier_ROOT=/path/to/kvtier
 ```
 
 如果本适配器通过父项目的 `add_subdirectory` 引入，且已存在 CMake
-目标 `solidcacher`，则直接链接该目标。
+目标 `kvtier`，则直接链接该目标。
 
 ### CMake 选项
 
@@ -48,9 +48,9 @@ cmake .. -DSOLIDCACHER_ROOT=/path/to/solidcacher-cpp
 |------|--------|------|
 | `LLAMA_INCLUDE_DIR` | 自动查找 | llama.h 路径 |
 | `LLAMA_LIBRARY` | 自动查找 | libllama 路径 |
-| `SOLIDCACHER_ROOT` | `../..` | solidcacher-cpp 核心根目录 |
-| `SOLIDCACHER_INCLUDE_DIR` | `${SOLIDCACHER_ROOT}/include` | solidcacher.h 路径 |
-| `SOLIDCACHER_LIBRARY` | `${SOLIDCACHER_ROOT}/build` | libsolidcacher 路径 |
+| `KVTier_ROOT` | `../..` | kvtier 核心根目录 |
+| `KVTier_INCLUDE_DIR` | `${KVTier_ROOT}/include` | kvtier.h 路径 |
+| `KVTier_LIBRARY` | `${KVTier_ROOT}/build` | libkvtier 路径 |
 | `LLAMAKVCACHE_BUILD_EXAMPLES` | ON | 编译示例 |
 | `LLAMAKVCACHE_SHARED` | OFF | 编译为动态库 |
 

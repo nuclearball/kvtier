@@ -1,6 +1,6 @@
-"""High-level Python wrapper over solidcacher's C API.
+"""High-level Python wrapper over kvtier's C API.
 
-Semantics notes (verified against solidcacher/src/cache.c):
+Semantics notes (verified against kvtier/src/cache.c):
 
 * ``cache_put`` is **asynchronous** and does NOT copy the payload for the
   single/replica paths — it stores pointers and the writer thread reads them
@@ -32,14 +32,14 @@ from ._binding import (
     load_library,
 )
 
-log = logging.getLogger("solidcacher")
+log = logging.getLogger("kvtier")
 
 
 @dataclass(frozen=True)
 class CacheKey:
-    """Complete solidcacher address: prefix_id + token path + group depth.
+    """Complete kvtier address: prefix_id + token path + group depth.
 
-    Accepted directly by :meth:`Solidcacher.put` / ``get`` / ``exists`` /
+    Accepted directly by :meth:`Kvtier.put` / ``get`` / ``exists`` /
     ``lookup_rc`` / ``evict`` — preferred over passing the fields separately
     (it is surprisingly easy to forget ``group_idx`` and silently collapse
     every page of a sequence onto group 0).
@@ -79,7 +79,7 @@ _CONFIG_FIELDS = {f[0] for f in KVConfig._fields_}
 
 
 def _norm_rc(rc: int) -> int:
-    """Normalize a solidcacher return code to the solidcacher.h enum.
+    """Normalize a kvtier return code to the kvtier.h enum.
 
     The C code returns error codes as POSITIVE magnitudes (``-KV_ENOENT``
     with ``KV_ENOENT = -3`` => ``3``), while the header documents the enum as
@@ -179,7 +179,7 @@ class _PendingPut:
 
 
 def _ack_trampoline(user_ptr, rc):
-    """Runs on the solidcacher writer thread."""
+    """Runs on the kvtier writer thread."""
     if user_ptr is None:
         return
     pending = _LIVE_PUTS.pop(int(user_ptr), None)
@@ -225,14 +225,14 @@ class GetResult:
 
 
 __all__ = [
-    "Solidcacher",
-    "SolidcacherError",
+    "Kvtier",
+    "KvtierError",
     "GetResult",
     "STAT_KEYS",
 ]
 
 
-class SolidcacherError(Exception):
+class KvtierError(Exception):
     def __init__(self, op: str, rc: int):
         self.op = op
         self.rc = rc
@@ -244,7 +244,7 @@ class SolidcacherError(Exception):
 # ---------------------------------------------------------------------------
 
 
-class Solidcacher:
+class Kvtier:
     """ owns one cache_t instance.  Not fork/thread-shared beyond the C
     library's own internal threading."""
 
@@ -277,7 +277,7 @@ class Solidcacher:
             ctypes.byref(cfg),
         )
         if rc != KV_EOK:
-            raise SolidcacherError("cache_open", _norm_rc(rc))
+            raise KvtierError("cache_open", _norm_rc(rc))
         self._handle = handle
 
     # -- lifecycle ---------------------------------------------------------
@@ -329,7 +329,7 @@ class Solidcacher:
         returns:     enqueue rc (KV_EOK == accepted); final status via ack
         """
         if self._handle is None:
-            raise SolidcacherError("cache_put", -111)  # closed
+            raise KvtierError("cache_put", -111)  # closed
 
         if isinstance(prefix_id, CacheKey):
             ck = prefix_id
@@ -385,7 +385,7 @@ class Solidcacher:
 
     def put_sync(self, *args, timeout: float | None = None, **kwargs) -> int:
         """Put and block until the ack fires; returns the final rc
-        (normalized: 0 == KV_EOK, negative == solidcacher.h error enum)."""
+        (normalized: 0 == KV_EOK, negative == kvtier.h error enum)."""
         ev = threading.Event()
         holder: dict[str, int] = {}
 
@@ -416,7 +416,7 @@ class Solidcacher:
     def get(self, prefix_id, tokens=None, n_tokens: int | None = None):
         """Sync get of the deepest group.  Returns GetResult or None on miss."""
         if self._handle is None:
-            raise SolidcacherError("cache_get", -111)
+            raise KvtierError("cache_get", -111)
         pid, toks, n = self._resolve(prefix_id, tokens, n_tokens)
         token_arr = (ctypes.c_uint32 * max(n, 1))(*toks)
         res = CacheGetResult()
@@ -447,7 +447,7 @@ class Solidcacher:
     def lookup_rc(self, prefix_id, tokens=None, n_tokens: int | None = None) -> int:
         """Raw cache_get rc (normalized): KV_EOK / KV_ENOENT / KV_EVICTED / ..."""
         if self._handle is None:
-            raise SolidcacherError("cache_get", -111)
+            raise KvtierError("cache_get", -111)
         pid, toks, n = self._resolve(prefix_id, tokens, n_tokens)
         token_arr = (ctypes.c_uint32 * max(n, 1))(*toks)
         res = CacheGetResult()

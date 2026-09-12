@@ -11,17 +11,17 @@ import time
 from pathlib import Path
 
 from conftest import make_cache
-from solidcacher_py._binding import KV_TOKENS_PER_GROUP
+from kvtier_py._binding import KV_TOKENS_PER_GROUP
 
 REPO = Path(__file__).resolve().parents[1]
 
 CHILD_SRC = r'''
 import os, sys, time, signal
 sys.path.insert(0, {repo!r})
-from solidcacher_py.cache import Solidcacher
+from kvtier_py.cache import Kvtier
 
 uris = {uris!r}
-c = Solidcacher(uris, **{cfg!r})
+c = Kvtier(uris, **{cfg!r})
 for k in range(8):
     toks = [(k * 65537 + i) % 0x7FFFFFFF for i in range({page})]
     rc = c.put_sync(0xC000 + k, toks, [bytes([k]) * 512])
@@ -41,9 +41,9 @@ def test_reopen_preserves_data(tmp_path):
     assert c.put_sync(0xC0DE, toks, [b"durable" * 64]) == 0
     c.close()
 
-    from solidcacher_py.cache import Solidcacher
+    from kvtier_py.cache import Kvtier
 
-    c2 = Solidcacher(uris, **cfg)
+    c2 = Kvtier(uris, **cfg)
     try:
         res = c2.get(0xC0DE, toks)
         assert res is not None
@@ -66,9 +66,9 @@ def test_sigkill_crash_recovery(tmp_path):
     proc.wait(60)
     assert proc.returncode == -signal.SIGKILL, (proc.returncode, proc.stderr.read())
 
-    from solidcacher_py.cache import Solidcacher
+    from kvtier_py.cache import Kvtier
 
-    c = Solidcacher(uris, **cfg)
+    c = Kvtier(uris, **cfg)
     try:
         found = 0
         for k in range(8):

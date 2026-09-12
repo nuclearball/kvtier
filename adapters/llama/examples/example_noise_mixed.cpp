@@ -1,7 +1,7 @@
 /**
  * example_noise_mixed.cpp — llama.cpp KV save/restore with background noise IO
  *
- * Runs two independent solidcacher instances in one process:
+ * Runs two independent kvtier instances in one process:
  *   App 1 (measured):  llama adapter save/restore cycles, verified for
  *                      byte/token correctness each round.
  *   App 2 (noise):     another cache_t on its own device files, continuously
@@ -16,7 +16,7 @@
  *       [--dir DIR] [--csv PATH]
  */
 #include "llama-kvcache.h"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>

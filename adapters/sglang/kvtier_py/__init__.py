@@ -1,4 +1,4 @@
-"""solidcacher_py — ctypes binding + high-level wrapper for solidcacher."""
+"""kvtier_py — ctypes binding + high-level wrapper for kvtier."""
 
 from ._binding import (
     ERROR_NAMES,
@@ -9,11 +9,11 @@ from ._binding import (
     err_name,
     load_library,
 )
-from .cache import CacheKey, GetResult, STAT_KEYS, Solidcacher, SolidcacherError
+from .cache import CacheKey, GetResult, STAT_KEYS, Kvtier, KvtierError
 
 __all__ = [
-    "Solidcacher",
-    "SolidcacherError",
+    "Kvtier",
+    "KvtierError",
     "GetResult",
     "CacheKey",
     "STAT_KEYS",

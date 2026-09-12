@@ -1,7 +1,7 @@
 /* generation GC tests (design: 世代划分 / FRU 最老世代丢弃 / 水位滞回 /
  * 不存在的字符串返回不存在, 被丢弃的返回 KV_EVICTED) */
 /* white-box access to internals (Makefile compiles with -Isrc) */
-#include "solidcacher.h"
+#include "kvtier.h"
 #include "common.hpp"
 #include "cache.hpp"
 #include "radix.hpp"
@@ -83,6 +83,7 @@ static void test_fru_hysteresis(void) {
     unlink(DEV0); unlink(DEV1); unlink(DEV0 ".ckpt");
     struct kv_config cfg;
     base_cfg(&cfg);
+    cfg.gc_start_pct = 200;   /* keep generational GC out of the write burst */
     const char *uris[] = { DEV0, DEV1 };
     cache_t *c = NULL;
     CHECK(cache_open(&c, uris, 2, &cfg) == KV_EOK);
@@ -108,6 +109,11 @@ static void test_fru_hysteresis(void) {
     /* nonexistent string must report not-exists (never existed) */
     CHECK(get_rc(c, n_keys + 12345) == -KV_ENOENT);
 
+    /* now arm the watermark: live is at 93%, above the 80% start line */
+    cfg.gc_start_pct = 80;
+    cfg.gc_stop_pct = 60;
+    c->cfg.gc_start_pct = cfg.gc_start_pct;
+    c->cfg.gc_stop_pct = cfg.gc_stop_pct;
     sleep(5);   /* GC ticks (2s gate): drain below the stop watermark */
 
     live = cache_stats(c, "live_bytes");

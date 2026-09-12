@@ -17,9 +17,6 @@ __pycache__/
 .pytest_cache/
 .venv/
 
-# local design notes (kept locally, not published)
-/design/
-
 # secrets / local config
 password*
 .env

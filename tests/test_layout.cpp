@@ -1,6 +1,6 @@
 /* test_layout: model-aware layout via kv_mp_config_values -> kv_config */
 #include "common.hpp"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include "model_profile.h"
 
 #include <cstdio>

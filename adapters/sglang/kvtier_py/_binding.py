@@ -1,13 +1,13 @@
-"""ctypes binding for solidcacher (libsolidcacher).
+"""ctypes binding for kvtier (libkvtier).
 
-Mirrors the public structs and prototypes of solidcacher/include/solidcacher.h
+Mirrors the public structs and prototypes of kvtier/include/kvtier.h
 (pinned to the layout as of 2026-09).  The shared library is located via
 (in order of precedence):
 
   1. explicit ``path`` argument to :func:`load_library`
-  2. ``$SOLIDCACHER_LIBRARY`` environment variable
-  3. ``<repo>/solidcacher/libsolidcacher.dylib`` / ``.so`` (build with
-     ``make shared`` inside solidcacher/)
+  2. ``$KVTier_LIBRARY`` environment variable
+  3. ``<repo>/build/libkvtier.dylib`` / ``.so`` (build with CMake, see
+     the repository README)
   4. system search paths via ``ctypes.util.find_library``
 
 Struct layouts must match the C definitions exactly; ctypes uses the same
@@ -22,7 +22,7 @@ import os
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# constants (solidcacher.h)
+# constants (kvtier.h)
 # ---------------------------------------------------------------------------
 
 KV_TOKENS_PER_GROUP = 32
@@ -77,10 +77,11 @@ except ImportError:  # direct/script import
 
 
 class KVConfig(ctypes.Structure):
-    """Mirror of ``struct kv_config`` (solidcacher.h).
+    """Mirror of ``struct kv_config`` (kvtier.h).
 
-    The field list is generated from solidcacher/tools/config_schema.json by
-    ``make gen-config`` (see ``_config_fields.py``); do not edit by hand.
+    The field list is generated from kvtier/tools/config_schema.json by
+    ``python3 tools/gen_config.py`` (see ``_config_fields.py``); do not edit by
+    hand.
     """
 
     _fields_ = CONFIG_FIELDS
@@ -129,37 +130,36 @@ AckFn = ctypes.CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_int)
 
 
 def _candidate_paths() -> list[str]:
-    env = os.environ.get("SOLIDCACHER_LIBRARY")
+    env = os.environ.get("KVTier_LIBRARY")
     if env:
         return [env]
     here = Path(__file__).resolve()
-    # walk up to the repo root from adapters/<name>/solidcacher_py/ and look
-    # for either the original C core (solidcacher/) or the C++ rewrite
-    # (solidcacher-cpp/, CMake build in build/)
+    # walk up to the repo root from adapters/<name>/kvtier_py/ and look
+    # for the kvtier tree (CMake build in build/)
     cands: list[str] = []
     for parent in here.parents:
-        for name in ("solidcacher-cpp", "solidcacher", ""):
+        for name in ("kvtier", ""):
             sc = (parent / name) if name else parent
-            if (sc / "include" / "solidcacher.h").exists():
+            if (sc / "include" / "kvtier.h").exists():
                 cands += [
                     str(sc / "build" / n)
-                    for n in ("libsolidcacher.dylib", "libsolidcacher.so")
+                    for n in ("libkvtier.dylib", "libkvtier.so")
                 ]
                 cands += [
                     str(sc / n)
-                    for n in ("libsolidcacher.dylib", "libsolidcacher.so")
+                    for n in ("libkvtier.dylib", "libkvtier.so")
                 ]
                 break
         if cands:
             break
-    found = ctypes.util.find_library("solidcacher")
+    found = ctypes.util.find_library("kvtier")
     if found:
         cands.append(found)
     return cands
 
 
 def load_library(path: str | None = None) -> ctypes.CDLL:
-    """Load libsolidcacher and wire up all prototypes.  Raises OSError if absent."""
+    """Load libkvtier and wire up all prototypes.  Raises OSError if absent."""
     candidates = [path] if path else _candidate_paths()
     lib = None
     last_err: Exception | None = None
@@ -173,8 +173,8 @@ def load_library(path: str | None = None) -> ctypes.CDLL:
             last_err = e
     if lib is None:
         raise OSError(
-            "libsolidcacher shared library not found "
-            f"(tried: {candidates}); build it with 'make shared' in solidcacher/"
+            "libkvtier shared library not found "
+            f"(tried: {candidates}); build it with CMake (see the repository README)"
         ) from last_err
 
     lib.kv_config_default.argtypes = [ctypes.POINTER(KVConfig)]

@@ -1,6 +1,6 @@
 /* device geometry probe tests: file backend sanity + cache integration */
 #include "device.hpp"
-#include "solidcacher.h"
+#include "kvtier.h"
 #include "cache.hpp"      /* white-box: struct device geom after cache_open */
 #include <cstdio>
 #include <cstdlib>

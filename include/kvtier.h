@@ -10,7 +10,7 @@ extern "C" {
 #endif
 
 /* ------------------------------------------------------------------ */
-/* constants (design-glm-5.3-lld.md §1)                               */
+/* core constants                                                      */
 /* ------------------------------------------------------------------ */
 #define KV_TOKENS_PER_GROUP   32        /* tokens per group          */
 #define KV_PAGE_SIZE          4096      /* NVMe base page            */
@@ -24,7 +24,7 @@ extern "C" {
 #define KV_STRIPE_THRESHOLD   (1024*1024) /* stripes when > 1MiB     */
 #define KV_MAX_STRIPE_PARTS   1024      /* hard cap: put beyond -> EINVAL */
 
-/* DRAM read cache defaults (dram-cache-design.md) */
+/* DRAM read cache defaults */
 #define KV_DRAM_DEFAULT_BYTES     (256ull * 1024 * 1024)
 #define KV_DRAM_DEFAULT_ENTRY_MAX (8ull * 1024 * 1024)
 #define KV_DRAM_BACKEND_AUTO      0
@@ -83,7 +83,7 @@ enum {
 /* configuration                                                      */
 /* ------------------------------------------------------------------ */
 /* Configuration struct.  Field layout is generated from
- * tools/config_schema.json (run `make gen-config`); do not edit by hand.
+ * tools/config_schema.json (run `python3 tools/gen_config.py`); do not edit by hand.
  * `stripe_unit` / `region_align_bytes` are generic layout knobs: the
  * model_profile module (optional, adapter-side) computes them for a model,
  * but the core library stays model-agnostic.  0 => core default. */

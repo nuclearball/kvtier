@@ -10,7 +10,7 @@
  * phases: write n_ops keys -> read them back -> reopen and re-verify
  * (recovery).  metrics_level=FULL; CSV written at each phase boundary.
  */
-#include "solidcacher.h"
+#include "kvtier.h"
 #include "model_profile.h"
 #include "metrics/metrics.hpp"
 #include <stdio.h>

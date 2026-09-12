@@ -2,7 +2,7 @@
  * minimal demo: put/get a few prefixes against a 2-device file-backed cache,
  * print stats, close, reopen, verify recovery.
  */
-#include "solidcacher.h"
+#include "kvtier.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

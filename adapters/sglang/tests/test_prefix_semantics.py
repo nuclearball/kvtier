@@ -1,4 +1,4 @@
-"""Validation core: solidcacher's radix multi-group semantics as exercised by
+"""Validation core: kvtier's radix multi-group semantics as exercised by
 sglang-shaped access patterns (TokenCodec content addressing).
 
 Covers:
@@ -16,7 +16,7 @@ import pytest
 
 from conftest import make_cache  # noqa: F401
 from sglang_backend.keycodec import TokenCodec
-from solidcacher_py._binding import (
+from kvtier_py._binding import (
     KV_ENOENT,
     KV_EVICTED,
     KV_MAX_GROUPS,
@@ -83,7 +83,7 @@ def _longest_prefix(cache, codec, toks, n_pages) -> int:
 
 
 def test_shorter_query_is_exact_match(cache, codec):
-    """solidcacher is exact per (prefix_id, depth): a depth whose leaf was
+    """kvtier is exact per (prefix_id, depth): a depth whose leaf was
     never written misses even when deeper pages exist above it, and a
     truncated token path never reaches deeper leaves."""
     toks = stream(6 * PAGE)
@@ -161,13 +161,13 @@ def test_shared_prefix_evict_affects_both(cache, codec):
 
 def test_max_groups_bound(tmp_path, codec):
     """page_idx >= KV_MAX_GROUPS must be rejected by the codec before it can
-    create a bogus address (solidcacher hard-caps at 256 groups)."""
+    create a bogus address (kvtier hard-caps at 256 groups)."""
     with pytest.raises(ValueError, match="KV_MAX_GROUPS"):
         codec.encode(stream(KV_MAX_GROUPS * PAGE), 256)
 
 
 def test_page_size_must_match_group_size():
-    from solidcacher_py._binding import KV_TOKENS_PER_GROUP as G
+    from kvtier_py._binding import KV_TOKENS_PER_GROUP as G
 
     TokenCodec(page_size=G)
     with pytest.raises(ValueError, match="KV_TOKENS_PER_GROUP"):

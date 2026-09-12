@@ -1,6 +1,6 @@
-"""Key codecs: sglang page keys → solidcacher (prefix_id, tokens, group_idx).
+"""Key codecs: sglang page keys → kvtier (prefix_id, tokens, group_idx).
 
-solidcacher addresses data by (prefix_id, per-32-token-group hashes) routed
+kvtier addresses data by (prefix_id, per-32-token-group hashes) routed
 through a radix tree.  A codec converts sglang's page-granular string keys
 into that address space.  Two flavours:
 
@@ -14,13 +14,13 @@ into that address space.  Two flavours:
   a prefix share the radix path, group_idx == page index, and the key tokens
   are the real token stream.  sglang's storage interface cannot hand back
   tokens (keys are irreversible hashes), so this codec is driven directly by
-  tests/demo to exercise solidcacher's radix multi-group path.
+  tests/demo to exercise kvtier's radix multi-group path.
 """
 
 from __future__ import annotations
 
-from solidcacher_py._binding import KV_MAX_GROUPS, KV_TOKENS_PER_GROUP
-from solidcacher_py.cache import CacheKey
+from kvtier_py._binding import KV_MAX_GROUPS, KV_TOKENS_PER_GROUP
+from kvtier_py.cache import CacheKey
 
 _FNV_OFFSET = 0xCBF29CE484222325
 _FNV_PRIME = 0x100000001B3
@@ -37,7 +37,7 @@ def _fnv1a(data: bytes, seed: int) -> int:
 
 
 def mix64(x: int) -> int:
-    """splitmix64 finalizer (same as solidcacher kv_hash_mix64)."""
+    """splitmix64 finalizer (same as kvtier kv_hash_mix64)."""
     x &= 0xFFFFFFFFFFFFFFFF
     x ^= x >> 30
     x = (x * 0xBF58476D1CE4E5B9) & 0xFFFFFFFFFFFFFFFF
@@ -80,7 +80,7 @@ class TokenCodec:
         prefix_id = content-hash(tokens[0:(k+1)*32])
         group_idx = k
 
-    VALIDATED SEMANTICS: solidcacher's logical address is
+    VALIDATED SEMANTICS: kvtier's logical address is
     ``(prefix_id, group_idx)`` — the writer's publish path looks up the
     side table by exactly that pair and skips the token-hash path entirely
     (writer.c side_get shortcut), so two token streams that share a
@@ -98,7 +98,7 @@ class TokenCodec:
 
     def __init__(self, page_size: int = KV_TOKENS_PER_GROUP):
         if page_size != KV_TOKENS_PER_GROUP:
-            # solidcacher's group size is a compile-time constant; a native
+            # kvtier's group size is a compile-time constant; a native
             # integration would pin sglang's --page-size to 32.
             raise ValueError(
                 f"page_size must equal KV_TOKENS_PER_GROUP={KV_TOKENS_PER_GROUP}"
@@ -119,7 +119,7 @@ class TokenCodec:
     def encode(self, tokens, page_idx: int) -> CacheKey:
         if page_idx >= KV_MAX_GROUPS:
             raise ValueError(
-                f"page_idx {page_idx} exceeds solidcacher KV_MAX_GROUPS={KV_MAX_GROUPS}"
+                f"page_idx {page_idx} exceeds kvtier KV_MAX_GROUPS={KV_MAX_GROUPS}"
             )
         tokens = list(tokens)
         n_needed = (page_idx + 1) * self.page_size
