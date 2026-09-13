@@ -14,7 +14,6 @@ extern "C" {
 /* ------------------------------------------------------------------ */
 #define KV_TOKENS_PER_GROUP   32        /* tokens per group          */
 #define KV_PAGE_SIZE          4096      /* NVMe base page            */
-#define KV_CHUNK_HDR_SIZE     64        /* chunk header (with pad)   */
 #define KV_WATERMARK_INTERVAL 16        /* watermark flush interval  */
 #define KV_BATCH_MIN_BYTES    (256*1024)/* group-commit batch floor  */
 #define KV_STRIPE_UNIT        (256*1024)/* stripe unit for big chunks*/
@@ -36,7 +35,6 @@ extern "C" {
 /* disk magics */
 #define KV_SB_MAGIC  0x3143564Bu /* 'KVC1' */
 #define KV_RG_MAGIC  0x4752564Bu /* 'KVRG' */
-#define KV_CK_MAGIC  0x4B43564Bu /* 'KVCK' */
 #define KV_CP_MAGIC  0x504B435Bu /* 'KCP1' checkpoint */
 
 /* region states */
@@ -45,7 +43,7 @@ extern "C" {
 #define KV_RG_FROZEN   2
 #define KV_RG_CLEANING 3
 
-/* chunk header flags */
+/* data-extent flags (legacy CHUNK naming) */
 #define KV_CHUNK_F_REPLICA  (1u << 0)
 #define KV_CHUNK_F_STRIPE   (1u << 1)
 #define KV_CHUNK_F_HOT      (1u << 2)

@@ -39,11 +39,12 @@ kvtier uses the SSD layer as a durable, high-capacity extension:
   different disks proceed in parallel.
 - **Group-commit batching.** A per-shard writer thread drains an MPSC ring and
   coalesces requests into batches (floor set by `batch_min_bytes`).
-- **Append-only chunks.** Each batch is encoded as one or more chunks
-  (`ChunkHdr` + per-layer records + CRC32) and appended sequentially to the
-  current region, with a watermark flush every few pages.
+- **Append-only payload.** Each batch is appended sequentially to the current
+  region as page-aligned, raw per-layer bytes (no on-disk header); the data CRC
+  and per-layer lengths live in the radix metadata and journal. A watermark
+  flush runs every few pages.
 - **Durable publish.** A matching journal record is written, then the leaf is
-  published into the radix index; the put `ack` fires only after the chunk is
+  published into the radix index; the put `ack` fires only after the payload is
   durable.
 
 **Read path**
@@ -97,7 +98,7 @@ flowchart LR
     API --> ROUTE{hash route by token path}
     ROUTE --> W[per-shard writer threads]
     W --> Q[MPSC queue]
-    Q --> BATCH[batch + chunk encode + CRC]
+    Q --> BATCH[batch + payload layout + CRC]
     BATCH --> IO[io_uring / sync O_DIRECT]
     IO --> SSD[(NVMe / SSD regions)]
     IO --> J[journal] --> CKPT[checkpoint]
@@ -262,7 +263,7 @@ kvtier/
 ├── src/
 │   ├── common / crc32 / hash      utilities (aligned alloc, clocks, CRC32, hashing)
 │   ├── device / io               Device abstraction + io_uring / sync I/O
-│   ├── chunk / region            chunk codec, region state machine, superblock
+│   ├── page / region             payload layout, region state machine, superblock
 │   ├── radix / journal / cuckoo  position-hash radix, journal + checkpoint, tombstone
 │   ├── hot / metrics / dram      hotness decay, metrics, DRAM read cache
 │   ├── writer / gc               per-shard writer threads + GC
@@ -423,7 +424,7 @@ ctest --test-dir build --output-on-failure
 | Test | Covers |
 |---|---|
 | `test_radix` | Radix tree insert/lookup/delete, overflow buckets |
-| `test_chunk` | Chunk encode/decode, CRC, stripe split |
+| `test_page` | Payload length↔pages, page CRC, stripe split |
 | `test_journal` | Journal append, replay, checkpoint |
 | `test_cache` | End-to-end put/get and recovery |
 | `test_device` | Device geometry probe and cache integration |
@@ -444,7 +445,7 @@ For a sanitizer run: `cmake -S . -B build-asan -DSC_ENABLE_ASAN=ON && cmake --bu
 Implemented and tested on the current tree:
 
 - Single- and multi-device region management with superblock + CRC.
-- Chunk encode/decode, striping, dual copies, journal + checkpoint.
+- Page-aligned payload layout, striping, dual copies, journal + checkpoint.
 - Async put with group-commit batching and ack-after-durability.
 - Generational GC, TTL expiry, TRIM, reader pins, hotness decay.
 - DRAM read cache with huge-page degradation.
