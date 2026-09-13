@@ -122,6 +122,14 @@ static void class_free(dram_cache *d, void *p, uint8_t cls) {
     }
 }
 
+/* True if p lives inside the bump arena. Blocks outside it came from the
+ * class_alloc heap fallback and must be free()d individually. */
+static bool block_in_arena(const dram_cache *d, const void *p) {
+    uintptr_t a = reinterpret_cast<uintptr_t>(d->arena);
+    uintptr_t x = reinterpret_cast<uintptr_t>(p);
+    return x >= a && x < a + d->bump;
+}
+
 static void queue_unlink(dram_shard *sh, dram_entry *e) {
     if (e->sprev)
         e->sprev->snext = e->snext;
@@ -326,7 +334,7 @@ int dram_put(dram_cache *d, uint64_t prefix_id, uint32_t group_idx, uint32_t ver
     e->expire_ts = expire_ts;
     e->buf_len = buf_len;
     e->n_records = n_recs;
-    e->external = (cls >= KV_DRAM_N_CLASSES);
+    e->external = (cls >= KV_DRAM_N_CLASSES) || !block_in_arena(d, e);
     e->size_class = cls;
     dram_rec *er = dram_entry_recs(e);
     for (uint16_t i = 0; i < n_recs; i++)
