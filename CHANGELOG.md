@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- DRAM read cache: free size-class blocks allocated by the arena-exhaustion
+  fallback so `dram_destroy` no longer leaks them (fixes the LeakSanitizer
+  failure in `test_dram`).
+
 ## [0.1.0] - 2026-09-12
 
 Initial release.
